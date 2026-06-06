@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Stremio Profile Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0d0d14; --card: #16161f; --border: #2a2a3a;
+    --accent: #7c6dfa; --text: #e8e8f0; --muted: #666680;
+    --danger: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 40px 20px 80px; }
+  body::before { content: ''; position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse 70% 50% at 20% 10%, rgba(124,109,250,0.1) 0%, transparent 60%); }
+  .wrap { max-width: 620px; margin: 0 auto; position: relative; }
+  h1 { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 36px; }
+  .step-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 16px; }
+
+  /* Profile list */
+  #profile-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .profile-row {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
+  }
+  .p-avatar {
+    width: 48px; height: 48px; border-radius: 10px;
+    object-fit: cover; flex-shrink: 0; background: var(--border);
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
+  }
+  .p-avatar img { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; }
+  .p-name { flex: 1; font-weight: 600; font-size: 15px; }
+  .p-del { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 22px; padding: 0 4px; opacity: 0.5; transition: opacity 0.15s; line-height: 1; }
+  .p-del:hover { opacity: 1; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 20px 0; }
+
+  /* Add form */
+  .add-form { display: flex; flex-direction: column; gap: 14px; }
+  .form-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+
+  /* Avatar picker area */
+  .avatar-area { display: flex; flex-direction: column; gap: 8px; }
+  .avatar-preview {
+    width: 72px; height: 72px; border-radius: 12px;
+    border: 2px dashed var(--border); background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; flex-shrink: 0; overflow: hidden; position: relative;
+    cursor: pointer; transition: border-color 0.2s;
+  }
+  .avatar-preview:hover { border-color: var(--accent); }
+  .avatar-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+  .avatar-preview .overlay {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s; border-radius: 10px;
+    font-size: 12px; color: #fff; text-align: center; padding: 4px;
+  }
+  .avatar-preview:hover .overlay { opacity: 1; }
+  .avatar-tabs { display: flex; gap: 4px; }
+  .avatar-tab {
+    font-size: 11px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer; font-family: inherit; transition: all 0.15s;
+  }
+  .avatar-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* Emoji picker */
+  .emoji-panel, .upload-panel { display: none; }
+  .emoji-panel.show, .upload-panel.show { display: block; }
+  .emoji-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .ep-opt {
+    font-size: 22px; width: 38px; height: 38px; border-radius: 8px;
+    background: var(--bg); border: 1px solid transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; transition: all 0.1s;
+  }
+  .ep-opt:hover, .ep-opt.selected { background: var(--border); border-color: var(--accent); }
+
+  /* Upload panel */
+  .upload-drop {
+    border: 2px dashed var(--border); border-radius: 10px;
+    padding: 20px; text-align: center; cursor: pointer;
+    transition: border-color 0.2s; margin-top: 8px;
+  }
+  .upload-drop:hover, .upload-drop.drag-over { border-color: var(--accent); }
+  .upload-drop p { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .upload-drop .icon { font-size: 28px; }
+  #file-input { display: none; }
+  .upload-note { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  /* Name input */
+  .name-area { flex: 1; min-width: 180px; }
+  .name-area label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; letter-spacing: 0.05em; }
+  input[type="text"] {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 11px 14px; color: var(--text);
+    font-family: inherit; font-size: 14px; outline: none; transition: border-color 0.2s;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+
+  .btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 11px 20px; font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s, transform 0.1s; white-space: nowrap; align-self: flex-end;
+  }
+  .btn:hover { background: #9181fb; transform: translateY(-1px); }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); background: transparent; }
+
+  /* Install */
+  #install-section { display: none; }
+  #install-section.show { display: block; }
+  .install-link-box {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; font-size: 12px; font-family: monospace;
+    color: var(--accent); word-break: break-all; margin-bottom: 14px; line-height: 1.6;
+  }
+  .install-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn-install {
+    background: #5a4fcf; color: #fff; border: none; border-radius: 8px;
+    padding: 12px 22px; font-family: inherit; font-size: 15px; font-weight: 700;
+    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: background 0.15s;
+  }
+  .btn-install:hover { background: #7c6dfa; }
+  .tip { font-size: 12px; color: var(--muted); margin-top: 14px; line-height: 1.7; }
+  .tip b { color: var(--text); }
+  .warn { color: #facc15; }
+
+  /* Size warning */
+  .size-warn { font-size: 12px; color: #facc15; margin-top: 6px; display: none; }
+  .size-warn.show { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>👤 Profile Builder</h1>
+  <p class="subtitle">Build a profile switcher row for Stremio. Upload a photo or GIF, or pick an emoji — then click install.</p>
+
+  <!-- Step 1 -->
+  <div class="step-title">Step 1 — Add your profiles</div>
+  <div class="card">
+    <div id="profile-list">
+      <div class="empty">No profiles yet — add one below.</div>
+    </div>
+
+    <div class="add-form">
+      <!-- Avatar section -->
+      <div class="avatar-area">
+        <div style="font-size:12px; color:var(--muted); letter-spacing:0.05em;">AVATAR</div>
+        <div class="avatar-preview" id="avatar-preview" onclick="document.getElementById('file-input').click()" title="Click to upload">
+          <span id="avatar-emoji">👤</span>
+          <div class="overlay">Click to upload<br/>image or GIF</div>
+        </div>
+        <div class="avatar-tabs">
+          <button class="avatar-tab active" id="tab-emoji" onclick="switchTab('emoji')">Emoji</button>
+          <button class="avatar-tab" id="tab-upload" onclick="switchTab('upload')">Upload</button>
+        </div>
+      </div>
+
+      <!-- Emoji panel -->
+      <div class="emoji-panel show" id="emoji-panel" style="flex:1; min-width:200px;">
+        <div style="font-size:12px; color:var(--muted); letter-spacing:0.05em; margin-bottom:6px;">PICK EMOJI</div>
+        <div class="emoji-grid" id="emoji-grid"></div>
+      </div>
+
+      <!-- Upload panel -->
+      <div class="upload-panel" id="upload-panel" style="flex:1; min-width:200px;">
+        <div class="upload-drop" id="upload-drop" onclick="document.getElementById('file-input').click()">
+          <div class="icon">🖼️</div>
+          <p>Click or drag & drop<br/>image or GIF here</p>
+        </div>
+        <div class="size-warn" id="size-warn">⚠️ Image is large — Stremio URLs have limits. Try a smaller file (under 200KB).</div>
+        <input type="file" id="file-input" accept="image/*,.gif"/>
+        <p class="upload-note">Supports JPG, PNG, GIF, WebP · Recommended: under 200KB</p>
+      </div>
+    </div>
+
+    <!-- Name + Add button -->
+    <div class="form-row" style="margin-top:16px;">
+      <div class="name-area">
+        <label>PROFILE NAME</label>
+        <input type="text" id="pname" placeholder="e.g. Dad, Mom, Kids…" maxlength="20" onkeydown="if(event.key==='Enter') addProfile()"/>
+      </div>
+      <button class="btn" onclick="addProfile()">+ Add Profile</button>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="step-title">Step 2 — Install in Stremio</div>
+  <div class="card">
+    <div id="no-profiles-msg" style="color:var(--muted);font-size:14px;">Add at least one profile above first.</div>
+    <div id="install-section">
+      <div class="install-link-box" id="manifest-url"></div>
+      <div class="install-actions">
+        <a class="btn-install" id="stremio-link" href="#">▶ Install in Stremio</a>
+        <button class="btn btn-outline" onclick="copyLink(event)">Copy URL</button>
+      </div>
+      <p class="tip">
+        After clicking <b>Install in Stremio</b>, open Stremio and scroll down on the home screen.
+        You'll see a <b>👤 Switch Profile</b> row with all your profiles as cards.<br><br>
+        <span class="warn">⚠️</span> <b>Large images</b> (over ~200KB) may make the URL too long for Stremio to handle.
+        If the install fails, try a smaller image or use an emoji instead.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+const EMOJIS = ['👤','😎','🦁','🐼','🦊','🐯','🐸','🐧','🦄','⭐','🎮','🎬','🎵','🏆','🚀','⚡','🔥','💎','🌙','🍕','👦','👧','👨','👩','🧒','👴','👵','🧔','👱','🎯','🐶','🐱','🦋','🌈','🎃','👻','🤖','👾','🎸','🏀'];
+
+let profiles    = [];
+let pickedEmoji = '👤';
+let uploadedImg = null; // base64 data URL
+let activeTab   = 'emoji';
+
+// ── Emoji grid ──────────────────────────────────────────────────────────────
+const grid = document.getElementById('emoji-grid');
+EMOJIS.forEach(e => {
+  const b = document.createElement('button');
+  b.className = 'ep-opt' + (e === pickedEmoji ? ' selected' : '');
+  b.textContent = e; b.type = 'button';
+  b.onclick = () => {
+    document.querySelectorAll('.ep-opt').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected');
+    pickedEmoji = e;
+    uploadedImg = null;
+    updatePreview();
+  };
+  grid.appendChild(b);
+});
+
+// ── Tabs ────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('emoji-panel').classList.toggle('show', tab === 'emoji');
+  document.getElementById('upload-panel').classList.toggle('show', tab === 'upload');
+  document.getElementById('tab-emoji').classList.toggle('active', tab === 'emoji');
+  document.getElementById('tab-upload').classList.toggle('active', tab === 'upload');
+}
+
+// ── Preview ─────────────────────────────────────────────────────────────────
+function updatePreview() {
+  const preview = document.getElementById('avatar-preview');
+  if (uploadedImg) {
+    preview.innerHTML = `<img src="${uploadedImg}" alt="avatar"/><div class="overlay">Click to change</div>`;
+  } else {
+    preview.innerHTML = `<span id="avatar-emoji">${pickedEmoji}</span><div class="overlay">Click to upload<br/>image or GIF</div>`;
+  }
+}
+
+// ── File upload ─────────────────────────────────────────────────────────────
+const fileInput = document.getElementById('file-input');
+fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+
+// Drag and drop
+const dropZone = document.getElementById('upload-drop');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+// Also allow dragging onto the preview
+const previewEl = document.getElementById('avatar-preview');
+previewEl.addEventListener('dragover', e => e.preventDefault());
+previewEl.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) { switchTab('upload'); handleFile(file); }
+});
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+
+  const warn = document.getElementById('size-warn');
+  warn.classList.remove('show');
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = e.target.result;
+
+    // Warn if large
+    if (data.length > 200000) warn.classList.add('show');
+
+    // For GIFs keep as-is (preserves animation)
+    // For other images, resize to max 200px to keep URL short
+    if (file.type === 'image/gif') {
+      uploadedImg = data;
+      updatePreview();
+      render();
+    } else {
+      resizeImage(data, 200, result => {
+        uploadedImg = result;
+        updatePreview();
+        render();
+      });
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function resizeImage(dataUrl, maxSize, cb) {
+  const img = new Image();
+  img.onload = () => {
+    const scale = Math.min(maxSize / img.width, maxSize / img.height, 1);
+    const w = Math.round(img.width  * scale);
+    const h = Math.round(img.height * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    cb(canvas.toDataURL('image/jpeg', 0.82));
+  };
+  img.src = dataUrl;
+}
+
+// ── Add profile ─────────────────────────────────────────────────────────────
+function addProfile() {
+  const name = document.getElementById('pname').value.trim();
+  if (!name) { document.getElementById('pname').focus(); return; }
+  if (profiles.length >= 8) { alert('Max 8 profiles.'); return; }
+
+  profiles.push({
+    name,
+    emoji: uploadedImg ? null : pickedEmoji,
+    image: uploadedImg || null
+  });
+
+  document.getElementById('pname').value = '';
+  // Reset avatar to emoji for next profile
+  uploadedImg = null;
+  updatePreview();
+  render();
+}
+
+function removeProfile(i) { profiles.splice(i, 1); render(); }
+
+// ── Render list ──────────────────────────────────────────────────────────────
+function render() {
+  const list = document.getElementById('profile-list');
+  if (!profiles.length) {
+    list.innerHTML = '<div class="empty">No profiles yet — add one below.</div>';
+    document.getElementById('install-section').classList.remove('show');
+    document.getElementById('no-profiles-msg').style.display = '';
+    return;
+  }
+
+  list.innerHTML = profiles.map((p, i) => {
+    const avatarHtml = p.image
+      ? `<div class="p-avatar"><img src="${p.image}" alt="${p.name}"/></div>`
+      : `<div class="p-avatar">${p.emoji}</div>`;
+    return `
+      <div class="profile-row">
+        ${avatarHtml}
+        <span class="p-name">${p.name.replace(/</g,'&lt;')}</span>
+        <button class="p-del" onclick="removeProfile(${i})">×</button>
+      </div>`;
+  }).join('');
+
+  updateLink();
+}
+
+// ── Install link ─────────────────────────────────────────────────────────────
+function updateLink() {
+  // Encode profiles (images are base64 inline — no server storage needed)
+  const config   = btoa(unescape(encodeURIComponent(JSON.stringify({ profiles }))));
+  const base     = window.location.origin;
+  const manifest = `${base}/profiles/${config}/manifest.json`;
+  const deep     = `stremio://${manifest.replace(/^https?:\/\//, '')}`;
+
+  document.getElementById('manifest-url').textContent = manifest;
+  document.getElementById('stremio-link').href = deep;
+  document.getElementById('install-section').classList.add('show');
+  document.getElementById('no-profiles-msg').style.display = 'none';
+}
+
+function copyLink(e) {
+  navigator.clipboard.writeText(document.getElementById('manifest-url').textContent).then(() => {
+    e.target.textContent = 'Copied!';
+    setTimeout(() => e.target.textContent = 'Copy URL', 1800);
+  });
+}
+</script>
+</body>
+</html>
